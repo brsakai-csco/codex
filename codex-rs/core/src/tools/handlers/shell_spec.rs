@@ -57,6 +57,12 @@ pub(crate) fn create_exec_command_tool_with_environment_id(
                 "Output token budget. Defaults to 10000 tokens; larger requests may be capped by policy.".to_string(),
             )),
         ),
+        (
+            "wake_on_exit".to_string(),
+            JsonSchema::boolean(Some(
+                "True injects a wake notification when a still-running command later exits; false or omitted disables it.".to_string(),
+            )),
+        ),
     ]);
     if include_shell_parameter {
         properties.insert(

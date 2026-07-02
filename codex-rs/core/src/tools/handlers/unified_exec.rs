@@ -40,6 +40,8 @@ pub(crate) struct ExecCommandArgs {
     #[serde(default)]
     sandbox_permissions: Option<SandboxPermissions>,
     #[serde(default)]
+    wake_on_exit: bool,
+    #[serde(default)]
     additional_permissions: Option<AdditionalPermissionProfile>,
     #[serde(default)]
     justification: Option<String>,

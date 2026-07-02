@@ -71,6 +71,12 @@ fn exec_command_tool_matches_expected_spec() {
                 )),
         ),
         (
+            "wake_on_exit".to_string(),
+            JsonSchema::boolean(Some(
+                    "True injects a wake notification when a still-running command later exits; false or omitted disables it.".to_string(),
+                )),
+        ),
+        (
             "login".to_string(),
             JsonSchema::boolean(Some(
                     "True runs the shell with -l/-i semantics; false disables them. Defaults to true.".to_string(),

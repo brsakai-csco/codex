@@ -107,6 +107,7 @@ pub(crate) struct ExecCommandRequest {
     pub process_id: i32,
     pub yield_time_ms: u64,
     pub max_output_tokens: Option<usize>,
+    pub wake_on_exit: bool,
     pub cwd: PathUri,
     pub sandbox_cwd: PathUri,
     pub turn_environment: TurnEnvironment,

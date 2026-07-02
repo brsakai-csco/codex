@@ -2,9 +2,25 @@
 
 In the codex-rs folder where the rust code lives:
 
+- This is a private fork. Local conventions in this file supersede upstream
+  conventions when they conflict.
+- Build through the Docker workflow:
+  `scripts/build-codex-docker.sh`
+  This builds the release `codex` binary and runs focused CLI regression tests
+  inside the container by default. The output binary is written to
+  `codex-rs/target-amd64/release/codex`.
+  Compile-only builds are discouraged because they can produce a binary that
+  immediately regresses expected behavior; use `--no-test` only for an explicit
+  compile-only check.
+- `cargo`, `rustc`, `rustup`, and current `just` are not expected to be
+  available on the host. Do not install host Rust tooling as part of ordinary
+  work in this fork; use the container script instead.
+- `just fmt` need not be run in this fork. Do not run it automatically after
+  code changes unless explicitly requested.
 - Crate names are prefixed with `codex-`. For example, the `core` folder's crate is named `codex-core`
 - When using format! and you can inline variables into {}, always do that.
-- Install any commands the repo relies on (for example `just`, `rg`, or `cargo-insta`) if they aren't already available before running instructions here.
+- Do not install host commands for the Rust build path. The Docker build script
+  provisions Rust, `just`, and `cargo-nextest` inside the container.
 - Never add or modify any code related to `CODEX_SANDBOX_NETWORK_DISABLED_ENV_VAR` or `CODEX_SANDBOX_ENV_VAR`.
   - You operate in a sandbox where `CODEX_SANDBOX_NETWORK_DISABLED=1` will be set whenever you use the `shell` tool. Any existing code that uses `CODEX_SANDBOX_NETWORK_DISABLED_ENV_VAR` was authored with this fact in mind. It is often used to early exit out of tests that the author knew you would not be able to run given your sandbox limitations.
   - Similarly, when you spawn a process using Seatbelt (`/usr/bin/sandbox-exec`), `CODEX_SANDBOX=seatbelt` will be set on the child process. Integration tests that want to run Seatbelt themselves cannot be run under Seatbelt, so checks for `CODEX_SANDBOX=seatbelt` are also often used to early exit out of tests, as appropriate.
@@ -59,15 +75,26 @@ In the codex-rs folder where the rust code lives:
     the new implementation so the invariants stay close to the code that owns them.
   - Avoid adding new standalone methods to `codex-rs/tui/src/chatwidget.rs` unless the change is
     trivial; prefer new modules/files and keep `chatwidget.rs` focused on orchestration.
-- When running Rust commands (e.g. `just fix` or `just test`) be patient with the command and never try to kill them using the PID. Rust lock can make the execution slow, this is expected.
+- When running Rust commands through the container (for example via
+  `scripts/build-codex-docker.sh`) be patient with the command and never try to
+  kill it using the PID. Rust locks and release linking can make execution slow;
+  this is expected.
 
-Run `just fmt` (in the `codex-rs` directory) automatically after you have finished making code changes anywhere in this repository; do not ask for approval to run it. Additionally, run the tests:
+For ordinary validation, use the container build script:
 
-1. Do not run `cargo test` directly. Use `just test` so test execution follows the repo defaults.
-2. Run the test for the specific project that was changed. For example, if changes were made in `codex-rs/tui`, run `just test -p codex-tui`.
-3. Once those pass, if any changes were made in common, core, or protocol, run the complete test suite with `just test`. Avoid `--all-features` for routine local runs because it expands the build matrix and can significantly increase `target/` disk usage; use it only when you specifically need full feature coverage. project-specific or individual tests can be run without asking the user, but do ask the user before running the complete test suite.
+1. Run `scripts/build-codex-docker.sh` to build the release binary and run the
+   focused CLI regression suite.
+2. Avoid build-without-test workflows. Use `scripts/build-codex-docker.sh
+   --no-test` only when explicitly doing a compile-only check.
+3. Use `scripts/build-codex-docker.sh --all-tests` only when explicitly asked
+   for a full local Rust test run.
 
-Before finalizing a large change to `codex-rs`, run `just fix -p <project>` (in `codex-rs` directory) to fix any linter issues in the code. Prefer scoping with `-p` to avoid slow workspace‑wide Clippy builds; only run `just fix` without `-p` if you changed shared crates. Do not re-run tests after running `fix` or `fmt`.
+Do not run `cargo test` directly on the host. If you need a crate-specific
+command that is not covered by the script, run it inside the Docker build
+container rather than installing host Rust tooling.
+
+Before finalizing a large change to `codex-rs`, prefer focused lint fixes inside
+the container when practical. Do not run `just fmt` automatically.
 
 ## The `codex-core` crate
 

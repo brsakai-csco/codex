@@ -1115,6 +1115,102 @@ async fn unified_exec_full_lifecycle_with_background_end_event() -> Result<()> {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn unified_exec_wake_on_exit_starts_turn_with_poll_instruction() -> Result<()> {
+    skip_if_wine_exec!(Ok(()), "uses a POSIX-only command fixture");
+    skip_if_no_network!(Ok(()));
+    skip_if_sandbox!(Ok(()));
+    skip_if_windows!(Ok(()));
+
+    let server = start_mock_server().await;
+
+    let mut builder = test_codex().with_config(|config| {
+        config.use_experimental_unified_exec_tool = true;
+        config
+            .features
+            .enable(Feature::UnifiedExec)
+            .expect("test config should allow feature update");
+    });
+    let test = builder.build_with_remote_env(&server).await?;
+
+    let call_id = "uexec-wake-on-exit";
+    let args = json!({
+        "cmd": "sleep 1; printf 'WAKE-ON-EXIT-FINAL-OUTPUT'",
+        "yield_time_ms": 250,
+        "wake_on_exit": true,
+    });
+
+    let responses = vec![
+        sse(vec![
+            ev_response_created("resp-1"),
+            ev_function_call(call_id, "exec_command", &serde_json::to_string(&args)?),
+            ev_completed("resp-1"),
+        ]),
+        sse(vec![
+            ev_response_created("resp-2"),
+            ev_assistant_message("msg-1", "waiting"),
+            ev_completed("resp-2"),
+        ]),
+        sse(vec![
+            ev_response_created("resp-3"),
+            ev_assistant_message("msg-2", "poll next"),
+            ev_completed("resp-3"),
+        ]),
+    ];
+    let request_log = mount_sse_sequence(&server, responses).await;
+
+    submit_unified_exec_turn(
+        &test,
+        "exercise wake on exit",
+        PermissionProfile::Disabled,
+    )
+    .await?;
+
+    let mut turn_completions = 0;
+    let mut saw_end_event = false;
+    while turn_completions < 2 || !saw_end_event {
+        let msg = wait_for_event(&test.codex, |_| true).await;
+        match msg {
+            EventMsg::ExecCommandEnd(ev) if ev.call_id == call_id => {
+                saw_end_event = true;
+            }
+            EventMsg::TurnComplete(_) => {
+                turn_completions += 1;
+            }
+            _ => {}
+        }
+    }
+
+    let requests = request_log.requests();
+    assert!(
+        requests.len() >= 3,
+        "expected initial, tool-output, and wake requests; got {}",
+        requests.len()
+    );
+    let wake_request = requests
+        .last()
+        .expect("missing wake request");
+    let wake_user_messages = wake_request.message_input_text_groups("user");
+    let wake_notification = wake_user_messages
+        .last()
+        .expect("wake request should include user messages")
+        .join("\n");
+    assert!(
+        wake_notification.contains("<exec_notification>"),
+        "wake request should include exec notification: {wake_notification}"
+    );
+    assert!(
+        wake_notification.contains("Call write_stdin"),
+        "wake notification should instruct the model to poll: {wake_notification}"
+    );
+    assert!(
+        !wake_notification.contains("WAKE-ON-EXIT-FINAL-OUTPUT"),
+        "wake notification should not deliver final process output: {wake_notification}"
+    );
+
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn unified_exec_network_denial_emits_failed_background_end_event() -> Result<()> {
     // TODO(anp): Remove after network-denial fixtures use target-native commands.
     skip_if_target_windows!(Ok(()), "uses the POSIX/Python network-denial fixture");

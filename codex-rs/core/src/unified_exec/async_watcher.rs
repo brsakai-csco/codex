@@ -12,6 +12,8 @@ use super::UnifiedExecContext;
 use super::process::OutputHandles;
 use super::process::UnifiedExecProcess;
 use super::take_plugin_metrics_sidecar;
+use crate::context::ContextualUserFragment;
+use crate::context::ExecNotification;
 use crate::exec::MAX_EXEC_OUTPUT_DELTAS_PER_CALL;
 use crate::plugins::metrics::finish_and_track_measurements;
 use crate::session::session::Session;
@@ -175,6 +177,7 @@ pub(crate) fn spawn_exit_watcher(
     started_at: Instant,
     network_denial_monitor: Option<tokio::task::JoinHandle<()>>,
     plugin_metrics_sidecar: Option<SharedPluginMetricsSidecar>,
+    wake_on_exit: bool,
 ) {
     let exit_token = process.cancellation_token();
     let output_drained = process.output_drained_notify();
@@ -198,8 +201,8 @@ pub(crate) fn spawn_exit_watcher(
         if let Some(message) = process.failure_message() {
             drop(plugin_metrics_sidecar);
             emit_failed_exec_end_for_unified_exec(
-                session_ref,
-                turn_ref,
+                Arc::clone(&session_ref),
+                Arc::clone(&turn_ref),
                 call_id,
                 command,
                 cwd,
@@ -222,8 +225,8 @@ pub(crate) fn spawn_exit_watcher(
             )
             .await;
             emit_exec_end_for_unified_exec(
-                session_ref,
-                turn_ref,
+                Arc::clone(&session_ref),
+                Arc::clone(&turn_ref),
                 call_id,
                 command,
                 cwd,
@@ -236,7 +239,22 @@ pub(crate) fn spawn_exit_watcher(
             )
             .await;
         }
+        if wake_on_exit {
+            wake_for_process_exit(session_ref, process_id).await;
+        }
     });
+}
+
+async fn wake_for_process_exit(session_ref: Arc<Session>, process_id: i32) {
+    let items = vec![ContextualUserFragment::into(ExecNotification::new(process_id))];
+    let Err(items) = session_ref.inject_if_running(items).await else {
+        return;
+    };
+    if let Err(err) = session_ref.try_start_turn_if_idle(items).await {
+        session_ref
+            .inject_no_new_turn(err.into_input(), /*current_turn_context*/ None)
+            .await;
+    }
 }
 
 impl<const MAX_BYTES: usize> Buffer<MAX_BYTES> {
