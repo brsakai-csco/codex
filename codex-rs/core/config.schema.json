@@ -3754,6 +3754,7 @@
               "queue": null,
               "submit": null,
               "toggle_fast_mode": null,
+              "toggle_permission_mode": null,
               "toggle_raw_output": null,
               "toggle_shortcuts": null,
               "toggle_side_conversation": null,
@@ -4400,6 +4401,14 @@
           ],
           "description": "Toggle Fast mode."
         },
+        "toggle_permission_mode": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/KeybindingsSpec"
+            }
+          ],
+          "description": "Toggle between Ask for Approval and Read Only permission modes."
+        },
         "toggle_raw_output": {
           "allOf": [
             {
@@ -4541,6 +4550,7 @@
             "queue": null,
             "submit": null,
             "toggle_fast_mode": null,
+            "toggle_permission_mode": null,
             "toggle_raw_output": null,
             "toggle_shortcuts": null,
             "toggle_side_conversation": null,

@@ -17,6 +17,7 @@ expression: "render_picker(params, 78)"
   Global         Copy                       ctrl-o
   Global         Clear Terminal             ctrl-l
   Global       - Toggle Vim Mode            unbound
+  Global         Toggle Permission Mode     shift-tab
   Global         Toggle Raw Output          alt-r
   Global         Toggle Side Conversation   ctrl-/
 

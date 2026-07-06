@@ -201,6 +201,47 @@ async fn profile_permissions_selection_emits_named_profile_event_only() {
 }
 
 #[tokio::test]
+async fn permission_mode_shortcut_toggles_between_workspace_and_read_only() {
+    let (mut chat, _rx, _op_rx) = make_chatwidget_manual(/*model_override*/ None).await;
+    chat.config.explicit_permission_profile_mode = true;
+    chat.config
+        .permissions
+        .set_permission_profile_from_session_snapshot(PermissionProfileSnapshot::active(
+            PermissionProfile::workspace_write(),
+            ActivePermissionProfile::new(":workspace"),
+        ))
+        .expect("set active profile");
+
+    let selection = chat
+        .permission_mode_toggle_selection()
+        .expect("read-only selection");
+    assert_eq!(selection.profile_id, ":read-only");
+    assert_eq!(selection.display_label, "Read Only");
+
+    chat.config
+        .permissions
+        .set_permission_profile_from_session_snapshot(PermissionProfileSnapshot::active(
+            PermissionProfile::read_only(),
+            ActivePermissionProfile::new(":read-only"),
+        ))
+        .expect("set active profile");
+
+    let selection = chat
+        .permission_mode_toggle_selection()
+        .expect("workspace selection");
+    assert_eq!(selection.profile_id, ":workspace");
+    assert_eq!(selection.approval_policy, Some(AskForApproval::OnRequest));
+    assert_eq!(selection.display_label, "Ask for approval");
+}
+
+#[tokio::test]
+async fn permission_mode_shortcut_is_unavailable_without_named_permission_profiles() {
+    let (chat, _rx, _op_rx) = make_chatwidget_manual(/*model_override*/ None).await;
+
+    assert!(chat.permission_mode_toggle_selection().is_none());
+}
+
+#[tokio::test]
 async fn profile_permissions_selection_emits_active_custom_profile() {
     let (mut chat, mut rx, _op_rx) = make_chatwidget_manual(/*model_override*/ None).await;
     chat.config.explicit_permission_profile_mode = true;

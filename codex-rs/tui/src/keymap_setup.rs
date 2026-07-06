@@ -929,6 +929,7 @@ mod tests {
                 "Chat.interrupt_turn",
                 "Editor.insert_newline",
                 "Composer.queue",
+                "Global.toggle_permission_mode",
                 "Global.open_external_editor",
                 "Global.copy",
                 "Global.toggle_vim_mode",

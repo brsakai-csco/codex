@@ -33,6 +33,54 @@ pub(crate) fn cyber_model_approval_reviewer(config: &Config) -> Option<Approvals
 }
 
 impl ChatWidget {
+    /// Builds the selection for the permission-mode shortcut when it is allowed.
+    pub(crate) fn permission_mode_toggle_selection(&self) -> Option<PermissionProfileSelection> {
+        if !self.config.explicit_permission_profile_mode {
+            return None;
+        }
+
+        let active_profile_id = self
+            .config
+            .permissions
+            .active_permission_profile()
+            .map(|profile| profile.id);
+        let (preset_id, profile_id, approval_policy, display_label) =
+            if active_profile_id.as_deref() == Some(":read-only") {
+                ("auto", ":workspace", AskForApproval::OnRequest, ASK_FOR_APPROVAL_LABEL)
+            } else {
+                let preset = builtin_approval_presets()
+                    .into_iter()
+                    .find(|preset| preset.id == "read-only")?;
+                (
+                    "read-only",
+                    ":read-only",
+                    AskForApproval::from(preset.approval),
+                    preset.label,
+                )
+            };
+        let preset = builtin_approval_presets()
+            .into_iter()
+            .find(|preset| preset.id == preset_id)?;
+
+        self.config
+            .permissions
+            .approval_policy
+            .can_set(&approval_policy.to_core())
+            .ok()?;
+        self.config
+            .permissions
+            .can_set_permission_profile(&preset.permission_profile)
+            .ok()?;
+        self.config
+            .is_permission_profile_allowed(profile_id, &preset.permission_profile)
+            .then_some(PermissionProfileSelection {
+                profile_id: profile_id.to_string(),
+                approval_policy: Some(approval_policy),
+                approvals_reviewer: Some(ApprovalsReviewer::User),
+                display_label: display_label.to_string(),
+            })
+    }
+
     pub(super) fn permission_mode_disabled_reason(
         &self,
         preset: &ApprovalPreset,

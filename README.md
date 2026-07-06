@@ -78,4 +78,24 @@ You can also use Codex with an API key, but this requires [additional setup](htt
 - [**Installing & building**](./docs/install.md)
 - [**Open source fund**](./docs/open-source-fund.md)
 
+## Custom patches
+
+This fork adds `wake_on_exit` to the `exec_command` tool. When set to `true` for
+a command that remains running after its initial response, Codex injects a
+notification when that process exits. The notification tells the agent to call
+`write_stdin` with the process ID and empty input to collect the final output
+and exit status. The flag is `false` by default.
+
+This fork also adds a configurable `Shift+Tab` TUI keybind that switches
+between Ask for Approval (`:workspace`) and Read Only (`:read-only`) permission
+modes when named permission profiles are enabled. The footer shows the active
+mode. Configure or disable it with `tui.keymap.global.toggle_permission_mode`.
+
+### TODO
+
+- Preserve the origin of rejected tool calls through unified exec. The current
+  `ToolError::Rejected(String)` representation can label policy, hook, runtime,
+  and cancellation failures as "rejected by user". Add structured rejection
+  provenance before presenting the error to the agent or user.
+
 This repository is licensed under the [Apache-2.0 License](LICENSE).

@@ -154,7 +154,10 @@ case "${test_mode}" in
     codex_core_filter+=' & not test(exec::tests::process_exec_tool_call_cancellation_allows_sigterm_cleanup)'
     codex_core_filter+=' & not test(exec::tests::kill_child_process_group_kills_grandchildren_on_timeout)'
     codex_core_filter+=' & not test(image_preparation::tests::detail_policies_apply_the_expected_budgets)'
-    test_args=(test -E "${codex_core_filter}")
+    tui_filter='package(codex-tui)'
+    tui_filter+=' & not test(status::tests::status_snapshot_includes_enterprise_monthly_credit_limit)'
+    tui_filter+=' & not test(status::tests::status_snapshot_wraps_enterprise_monthly_credit_details_in_narrow_terminal)'
+    test_args=(test -E "(${codex_core_filter}) | (${tui_filter})")
     ;;
   all)
     test_args=(test)

@@ -23,12 +23,14 @@ enum StatusLineAccent {
     Limit,
     Metadata,
     Mode,
+    ReadOnly,
+    Workspace,
     Thread,
     Progress,
 }
 
 impl StatusLineAccent {
-    fn for_item(item: StatusLineItem) -> Self {
+    fn for_item(item: StatusLineItem, text: &str) -> Self {
         match item {
             StatusLineItem::ModelName
             | StatusLineItem::ModelWithReasoning
@@ -51,6 +53,8 @@ impl StatusLineAccent {
                 Self::Metadata
             }
             StatusLineItem::FastMode | StatusLineItem::RawOutput => Self::Mode,
+            StatusLineItem::Permissions if text == "Read Only" => Self::ReadOnly,
+            StatusLineItem::Permissions if text == "Workspace" => Self::Workspace,
             StatusLineItem::Permissions => Self::Mode,
             StatusLineItem::ApprovalMode => Self::Mode,
             StatusLineItem::ThreadTitle | StatusLineItem::WorkspaceHeadline => Self::Thread,
@@ -68,6 +72,8 @@ impl StatusLineAccent {
             Self::Limit => &["constant.language", "storage.type"],
             Self::Metadata => &["comment", "constant.other"],
             Self::Mode => &["storage.modifier", "keyword.operator"],
+            Self::ReadOnly => &["markup.deleted", "invalid"],
+            Self::Workspace => &["markup.inserted", "string"],
             Self::Thread => &["markup.heading", "entity.name.section"],
             Self::Progress => &["markup.inserted", "constant.numeric"],
         }
@@ -76,8 +82,9 @@ impl StatusLineAccent {
     fn fallback_style(self) -> Style {
         match self {
             Self::Model | Self::State | Self::Metadata | Self::Mode => Style::default().cyan(),
-            Self::Path | Self::Usage | Self::Progress => Style::default().green(),
+            Self::Path | Self::Usage | Self::Progress | Self::Workspace => Style::default().green(),
             Self::Branch | Self::Limit | Self::Thread => Style::default().magenta(),
+            Self::ReadOnly => Style::default().red(),
         }
     }
 }
@@ -109,7 +116,7 @@ where
             spans.push(STATUS_LINE_SEPARATOR.dim());
         }
         let style = if use_theme_colors {
-            let accent = StatusLineAccent::for_item(item);
+            let accent = StatusLineAccent::for_item(item, &text);
             soften_status_line_style(
                 theme_style_for_accent(accent).unwrap_or_else(|| accent.fallback_style()),
             )

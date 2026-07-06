@@ -112,6 +112,8 @@ pub struct TuiGlobalKeymap {
     pub toggle_vim_mode: Option<KeybindingsSpec>,
     /// Toggle Fast mode.
     pub toggle_fast_mode: Option<KeybindingsSpec>,
+    /// Toggle between Ask for Approval and Read Only permission modes.
+    pub toggle_permission_mode: Option<KeybindingsSpec>,
     /// Toggle raw scrollback mode for copy-friendly transcript selection.
     pub toggle_raw_output: Option<KeybindingsSpec>,
     /// Switch between a side conversation and its parent without closing either.
