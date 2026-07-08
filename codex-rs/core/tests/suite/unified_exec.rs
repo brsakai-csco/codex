@@ -1119,7 +1119,7 @@ async fn unified_exec_wake_on_exit_starts_turn_with_poll_instruction() -> Result
     skip_if_wine_exec!(Ok(()), "uses a POSIX-only command fixture");
     skip_if_no_network!(Ok(()));
     skip_if_sandbox!(Ok(()));
-    skip_if_windows!(Ok(()));
+    skip_if_host_windows!(Ok(()));
 
     let server = start_mock_server().await;
 
@@ -1130,7 +1130,7 @@ async fn unified_exec_wake_on_exit_starts_turn_with_poll_instruction() -> Result
             .enable(Feature::UnifiedExec)
             .expect("test config should allow feature update");
     });
-    let test = builder.build_with_remote_env(&server).await?;
+    let test = builder.build_with_remote_and_local_env(&server).await?;
 
     let call_id = "uexec-wake-on-exit";
     let args = json!({

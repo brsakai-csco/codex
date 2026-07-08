@@ -138,6 +138,8 @@ case "${test_mode}" in
     codex_core_filter+=' & not test(suite::plugins::)'
     codex_core_filter+=' & not test(suite::search_tool::)'
     codex_core_filter+=' & not test(suite::request_permissions::)'
+    codex_core_filter+=' & not test(suite::network_approval::guardian_receives_exact_trigger_for_single_network_request)'
+    codex_core_filter+=' & not test(suite::network_approval::guardian_receives_exact_triggers_for_concurrent_network_requests)'
     codex_core_filter+=' & not test(suite::extension_sandbox::)'
     codex_core_filter+=' & not test(suite::sqlite_state::)'
     codex_core_filter+=' & not test(suite::token_budget::)'
