@@ -79,6 +79,16 @@ In the codex-rs folder where the rust code lives:
   `scripts/build-codex-docker.sh`) be patient with the command and never try to
   kill it using the PID. Rust locks and release linking can make execution slow;
   this is expected.
+- Only one Docker build or test invocation may run at a time. Before starting
+  another invocation, wait for the existing one to finish and collect its
+  result; do not start retries, duplicate validations, or status-recovery runs
+  while it holds a Docker, Cargo, or artifact lock.
+- Do not start a new container merely to inspect or recover a running build.
+  Report an unresponsive bounded status check and wait for the original run
+  unless the user explicitly directs otherwise.
+- When stopping containers, the agent may stop only the `codex-dev` container
+  that it started. Never stop, remove, or otherwise alter any other container,
+  including containers it did not start.
 
 For ordinary validation, use the container build script:
 
