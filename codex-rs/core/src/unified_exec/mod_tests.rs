@@ -141,6 +141,7 @@ async fn exec_command_with_tty(
             initial_exec_command_active: Arc::new(std::sync::atomic::AtomicBool::new(true)),
             hook_command: cmd.to_string(),
             tty,
+            wake_on_exit: false,
             network_approval: None,
             session: Arc::downgrade(session),
             last_used: started_at,
@@ -308,7 +309,7 @@ async fn write_stdin(
     input: &str,
     yield_time_ms: u64,
 ) -> Result<ExecCommandToolOutput, UnifiedExecError> {
-    session
+    let outcome = session
         .services
         .unified_exec_manager
         .write_stdin(WriteStdinRequest {
@@ -319,7 +320,13 @@ async fn write_stdin(
             truncation_policy: TruncationPolicy::Tokens(10_000),
             interaction_event: None,
         })
-        .await
+        .await?;
+    match outcome {
+        WriteStdinOutcome::Output(output) => Ok(output),
+        WriteStdinOutcome::WakeOnExitPending => {
+            panic!("test helper should not poll a wake-enabled session")
+        }
+    }
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -588,6 +595,7 @@ async fn terminating_initial_exec_command_rechecks_initial_response_state() -> a
             initial_exec_command_active: Arc::new(std::sync::atomic::AtomicBool::new(true)),
             hook_command: "sleep 60".to_string(),
             tty: true,
+            wake_on_exit: false,
             network_approval: None,
             session: Arc::downgrade(&session),
             last_used: Instant::now(),
@@ -662,6 +670,7 @@ async fn terminating_during_stdin_poll_returns_exited_response() -> anyhow::Resu
             initial_exec_command_active: Arc::new(std::sync::atomic::AtomicBool::new(false)),
             hook_command: "sleep 60".to_string(),
             tty: true,
+            wake_on_exit: false,
             network_approval: None,
             session: Arc::downgrade(&session),
             last_used,

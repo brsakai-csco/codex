@@ -43,6 +43,7 @@ use crate::session::step_context::StepContext;
 use crate::session::turn_context::TurnContext;
 use crate::session::turn_context::TurnEnvironment;
 use crate::shell::ShellType;
+use crate::tools::context::ExecCommandToolOutput;
 use crate::tools::network_approval::DeferredNetworkApproval;
 use codex_core_plugins::PluginMetricsSidecar;
 
@@ -142,6 +143,11 @@ impl std::fmt::Debug for WriteStdinInteractionEvent<'_> {
     }
 }
 
+pub(crate) enum WriteStdinOutcome {
+    Output(ExecCommandToolOutput),
+    WakeOnExitPending,
+}
+
 #[derive(Default)]
 pub(crate) struct ProcessStore {
     processes: HashMap<i32, ProcessEntry>,
@@ -185,6 +191,7 @@ struct ProcessEntry {
     initial_exec_command_active: Arc<std::sync::atomic::AtomicBool>,
     hook_command: String,
     tty: bool,
+    wake_on_exit: bool,
     network_approval: Option<DeferredNetworkApproval>,
     session: Weak<Session>,
     last_used: tokio::time::Instant,

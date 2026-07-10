@@ -1115,7 +1115,7 @@ async fn unified_exec_full_lifecycle_with_background_end_event() -> Result<()> {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn unified_exec_wake_on_exit_starts_turn_with_poll_instruction() -> Result<()> {
+async fn unified_exec_wake_on_exit_defers_empty_polls_until_completion() -> Result<()> {
     skip_if_wine_exec!(Ok(()), "uses a POSIX-only command fixture");
     skip_if_no_network!(Ok(()));
     skip_if_sandbox!(Ok(()));
@@ -1134,9 +1134,14 @@ async fn unified_exec_wake_on_exit_starts_turn_with_poll_instruction() -> Result
 
     let call_id = "uexec-wake-on-exit";
     let args = json!({
-        "cmd": "sleep 1; printf 'WAKE-ON-EXIT-FINAL-OUTPUT'",
+        "cmd": "sleep 5; printf 'WAKE-ON-EXIT-FINAL-OUTPUT'",
         "yield_time_ms": 250,
         "wake_on_exit": true,
+    });
+    let poll_call_id = "uexec-wake-on-exit-poll";
+    let poll_args = json!({
+        "session_id": 1000,
+        "chars": "",
     });
 
     let responses = vec![
@@ -1147,13 +1152,22 @@ async fn unified_exec_wake_on_exit_starts_turn_with_poll_instruction() -> Result
         ]),
         sse(vec![
             ev_response_created("resp-2"),
-            ev_assistant_message("msg-1", "waiting"),
+            ev_function_call(
+                poll_call_id,
+                "write_stdin",
+                &serde_json::to_string(&poll_args)?,
+            ),
             ev_completed("resp-2"),
         ]),
         sse(vec![
             ev_response_created("resp-3"),
-            ev_assistant_message("msg-2", "poll next"),
+            ev_assistant_message("msg-1", "waiting"),
             ev_completed("resp-3"),
+        ]),
+        sse(vec![
+            ev_response_created("resp-4"),
+            ev_assistant_message("msg-2", "poll next"),
+            ev_completed("resp-4"),
         ]),
     ];
     let request_log = mount_sse_sequence(&server, responses).await;
@@ -1167,6 +1181,7 @@ async fn unified_exec_wake_on_exit_starts_turn_with_poll_instruction() -> Result
 
     let mut turn_completions = 0;
     let mut saw_end_event = false;
+    let mut saw_terminal_interaction = false;
     while turn_completions < 2 || !saw_end_event {
         let msg = wait_for_event(&test.codex, |_| true).await;
         match msg {
@@ -1176,15 +1191,30 @@ async fn unified_exec_wake_on_exit_starts_turn_with_poll_instruction() -> Result
             EventMsg::TurnComplete(_) => {
                 turn_completions += 1;
             }
+            EventMsg::TerminalInteraction(ev) if ev.call_id == call_id => {
+                saw_terminal_interaction = true;
+            }
             _ => {}
         }
     }
 
     let requests = request_log.requests();
     assert!(
-        requests.len() >= 3,
-        "expected initial, tool-output, and wake requests; got {}",
+        requests.len() >= 4,
+        "expected initial, exec output, advisory, and wake requests; got {}",
         requests.len()
+    );
+    let (poll_output, _) = requests[2]
+        .function_call_output_content_and_success(poll_call_id)
+        .expect("missing deferred-poll output");
+    let poll_output = poll_output.expect("deferred-poll output should contain text");
+    assert!(
+        poll_output.contains("wake_on_exit enabled. Do not poll it; end the current turn."),
+        "deferred-poll output should instruct the model to end the turn: {poll_output}"
+    );
+    assert!(
+        !saw_terminal_interaction,
+        "a deferred empty poll should not emit a terminal interaction"
     );
     let wake_request = requests
         .last()

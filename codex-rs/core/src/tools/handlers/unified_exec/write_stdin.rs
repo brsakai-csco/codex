@@ -2,6 +2,7 @@ use crate::function_tool::FunctionCallError;
 use crate::tools::context::ToolInvocation;
 use crate::tools::context::ToolPayload;
 use crate::tools::context::boxed_tool_output;
+use crate::tools::context::ExecCommandToolOutput;
 use crate::tools::handlers::parse_arguments;
 use crate::tools::registry::CoreToolRuntime;
 use crate::tools::registry::PostToolUsePayload;
@@ -9,6 +10,7 @@ use crate::tools::registry::PreToolUsePayload;
 use crate::tools::registry::ToolExecutor;
 use crate::unified_exec::WriteStdinInteractionEvent;
 use crate::unified_exec::WriteStdinRequest;
+use crate::unified_exec::WriteStdinOutcome;
 use codex_tools::ToolName;
 use codex_tools::ToolSpec;
 use serde::Deserialize;
@@ -70,11 +72,12 @@ impl WriteStdinHandler {
         };
 
         let args: WriteStdinArgs = parse_arguments(&arguments)?;
-        let response = session
+        let session_id = args.session_id;
+        let outcome = session
             .services
             .unified_exec_manager
             .write_stdin(WriteStdinRequest {
-                process_id: args.session_id,
+                process_id: session_id,
                 input: &args.chars,
                 yield_time_ms: args.yield_time_ms,
                 max_output_tokens: args.max_output_tokens,
@@ -89,6 +92,26 @@ impl WriteStdinHandler {
                 FunctionCallError::RespondToModel(format!("write_stdin failed: {err}"))
             })?;
 
+        let response = match outcome {
+            WriteStdinOutcome::Output(response) => response,
+            WriteStdinOutcome::WakeOnExitPending => {
+                return Ok(boxed_tool_output(ExecCommandToolOutput {
+                    event_call_id: String::new(),
+                    chunk_id: String::new(),
+                    wall_time: std::time::Duration::ZERO,
+                    raw_output: format!(
+                        "Session {session_id} is still running with wake_on_exit enabled. Do not poll it; end the current turn. You will receive a completion notification with instructions to collect the final output and exit status."
+                    )
+                    .into_bytes(),
+                    truncation_policy: turn.model_info.truncation_policy.into(),
+                    max_output_tokens: args.max_output_tokens,
+                    process_id: Some(session_id),
+                    exit_code: None,
+                    original_token_count: None,
+                    hook_command: None,
+                }));
+            }
+        };
         Ok(boxed_tool_output(response))
     }
 }

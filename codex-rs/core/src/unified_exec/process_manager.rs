@@ -50,6 +50,7 @@ use crate::unified_exec::UnifiedExecError;
 use crate::unified_exec::UnifiedExecProcessManager;
 use crate::unified_exec::WriteStdinInteractionEvent;
 use crate::unified_exec::WriteStdinRequest;
+use crate::unified_exec::WriteStdinOutcome;
 use crate::unified_exec::async_watcher::emit_exec_end_for_unified_exec;
 use crate::unified_exec::async_watcher::emit_failed_exec_end_for_unified_exec;
 use crate::unified_exec::async_watcher::spawn_exit_watcher;
@@ -252,6 +253,7 @@ struct PreparedProcessHandles {
     hook_command: String,
     process_id: i32,
     tty: bool,
+    wake_on_exit: bool,
 }
 
 struct InitialExecCommandGuard {
@@ -759,7 +761,7 @@ impl UnifiedExecProcessManager {
     pub(crate) async fn write_stdin(
         &self,
         request: WriteStdinRequest<'_>,
-    ) -> Result<ExecCommandToolOutput, UnifiedExecError> {
+    ) -> Result<WriteStdinOutcome, UnifiedExecError> {
         let process_id = request.process_id;
 
         // Different terminal sessions can be polled concurrently, but reads and
@@ -785,10 +787,14 @@ impl UnifiedExecProcessManager {
             hook_command,
             process_id,
             tty,
+            wake_on_exit,
             ..
         } = self
             .prepare_process_handles(process_id, &locked_process)
             .await?;
+        if request.input.is_empty() && wake_on_exit && !process.has_exited() {
+            return Ok(WriteStdinOutcome::WakeOnExitPending);
+        }
         let mut status_after_write = None;
 
         if !request.input.is_empty() {
@@ -933,7 +939,7 @@ impl UnifiedExecProcessManager {
                 .await;
         }
 
-        Ok(response)
+        Ok(WriteStdinOutcome::Output(response))
     }
 
     async fn refresh_process_state(&self, process_id: i32) -> ProcessStatus {
@@ -993,6 +999,7 @@ impl UnifiedExecProcessManager {
             hook_command: entry.hook_command.clone(),
             process_id: entry.process_id,
             tty: entry.tty,
+            wake_on_exit: entry.wake_on_exit,
         })
     }
 
@@ -1026,6 +1033,7 @@ impl UnifiedExecProcessManager {
             initial_exec_command_active,
             hook_command,
             tty,
+            wake_on_exit,
             network_approval,
             session: Arc::downgrade(&context.session),
             last_used: started_at,
