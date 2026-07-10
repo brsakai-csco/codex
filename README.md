@@ -78,18 +78,16 @@ You can also use Codex with an API key, but this requires [additional setup](htt
 - [**Installing & building**](./docs/install.md)
 - [**Open source fund**](./docs/open-source-fund.md)
 
-## Custom patches
+## Tweaks
 
-This fork adds `wake_on_exit` to the `exec_command` tool. When set to `true` for
-a command that remains running after its initial response, Codex injects a
-notification when that process exits. The notification tells the agent to call
-`write_stdin` with the process ID and empty input to collect the final output
-and exit status. The flag is `false` by default.
+This fork adds an optional wake-on-exit signal for long-running terminal
+commands. When enabled, Codex notifies the agent when the command finishes, so
+the agent can end its turn rather than polling and then collect the final output
+and status.
 
-This fork also adds a configurable `Shift+Tab` TUI keybind that switches
-between Ask for Approval (`:workspace`) and Read Only (`:read-only`) permission
-modes when named permission profiles are enabled. The footer shows the active
-mode. Configure or disable it with `tui.keymap.global.toggle_permission_mode`.
+It also adds a configurable `Shift+Tab` shortcut for switching between Ask for
+Approval and Read Only modes when named permission profiles are enabled. The
+footer shows the active mode.
 
 ### TODO
 
