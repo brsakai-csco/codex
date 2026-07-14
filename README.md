@@ -83,7 +83,10 @@ You can also use Codex with an API key, but this requires [additional setup](htt
 This fork adds an optional wake-on-exit signal for long-running terminal
 commands. When enabled, Codex notifies the agent when the command finishes, so
 the agent can end its turn rather than polling and then collect the final output
-and status.
+and status. At the start of each turn, active terminal sessions are also
+provided to the agent with their session IDs, command previews, wake settings,
+and whether they are running or completed but awaiting collection. No terminal
+context is added when no sessions remain.
 
 It also adds a configurable `Shift+Tab` shortcut for switching between Ask for
 Approval and Read Only modes when named permission profiles are enabled. The

@@ -39,6 +39,8 @@ use crate::tools::sandboxing::SandboxAttempt;
 use crate::tools::sandboxing::ToolCtx;
 use crate::tools::sandboxing::ToolError;
 use crate::unified_exec::ExecCommandRequest;
+use crate::unified_exec::BackgroundTerminalContext;
+use crate::unified_exec::BackgroundTerminalStatus;
 use crate::unified_exec::MAX_UNIFIED_EXEC_PROCESSES;
 use crate::unified_exec::MAX_YIELD_TIME_MS;
 use crate::unified_exec::MIN_EMPTY_YIELD_TIME_MS;
@@ -1578,6 +1580,25 @@ impl UnifiedExecProcessManager {
                 process_id: entry.process_id.to_string(),
                 command: entry.hook_command.clone(),
                 cwd: entry.cwd.clone(),
+            })
+            .collect()
+    }
+
+    pub(crate) async fn list_processes_for_context(&self) -> Vec<BackgroundTerminalContext> {
+        let store = self.process_store.lock().await;
+        let mut entries = store.processes.values().collect::<Vec<_>>();
+        entries.sort_by_key(|entry| entry.process_id);
+        entries
+            .into_iter()
+            .map(|entry| BackgroundTerminalContext {
+                process_id: entry.process_id,
+                command: entry.hook_command.clone(),
+                status: if entry.process.has_exited() {
+                    BackgroundTerminalStatus::CompletedWaitingToBeReaped
+                } else {
+                    BackgroundTerminalStatus::Running
+                },
+                wake_on_exit: entry.wake_on_exit,
             })
             .collect()
     }

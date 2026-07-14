@@ -148,6 +148,20 @@ pub(crate) enum WriteStdinOutcome {
     WakeOnExitPending,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct BackgroundTerminalContext {
+    pub(crate) process_id: i32,
+    pub(crate) command: String,
+    pub(crate) status: BackgroundTerminalStatus,
+    pub(crate) wake_on_exit: bool,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum BackgroundTerminalStatus {
+    Running,
+    CompletedWaitingToBeReaped,
+}
+
 #[derive(Default)]
 pub(crate) struct ProcessStore {
     processes: HashMap<i32, ProcessEntry>,

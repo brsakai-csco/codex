@@ -11,6 +11,7 @@ use crate::compact::run_inline_auto_compact_task;
 use crate::compact_remote::run_inline_remote_auto_compact_task;
 use crate::compact_remote_v2::run_inline_remote_auto_compact_task as run_inline_remote_auto_compact_task_v2;
 use crate::connectors;
+use crate::context::BackgroundTerminals;
 use crate::context::ContextualUserFragment;
 use crate::environment_selection::TurnEnvironmentSnapshot;
 use crate::feedback_tags;
@@ -223,7 +224,7 @@ pub(crate) async fn run_turn(
         Err(err) => return Err(err),
     };
     // Keep the exact model-visible state used by this turn and its inline compactions.
-    let (world_state, display_roots) = tokio::join!(
+    let (mut world_state, display_roots, background_terminals) = tokio::join!(
         sess.record_context_updates_and_set_reference_context_item(first_step_context.as_ref()),
         async {
             if first_step_context
@@ -246,8 +247,16 @@ pub(crate) async fn run_turn(
                 turn_diff_display_roots(first_step_context.as_ref()).await
             }
         },
+        sess.services
+            .unified_exec_manager
+            .list_processes_for_context(),
     );
     let mut world_state = world_state?;
+    if let Some(background_terminals) = BackgroundTerminals::new(background_terminals) {
+        let background_terminals = ContextualUserFragment::into(background_terminals);
+        sess.record_conversation_items(&turn_context, std::slice::from_ref(&background_terminals))
+            .await;
+    }
 
     let Some((injection_items, explicitly_enabled_connectors)) = build_skills_and_plugins(
         &sess,

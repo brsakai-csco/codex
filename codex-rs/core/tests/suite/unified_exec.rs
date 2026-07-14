@@ -1224,13 +1224,35 @@ async fn unified_exec_wake_on_exit_defers_empty_polls_until_completion() -> Resu
         .last()
         .expect("wake request should include user messages")
         .join("\n");
+    let wake_context = wake_user_messages
+        .iter()
+        .flatten()
+        .map(String::as_str)
+        .collect::<Vec<_>>()
+        .join("\n");
     assert!(
-        wake_notification.contains("<exec_notification>"),
-        "wake request should include exec notification: {wake_notification}"
+        wake_context.contains("<exec_notification>"),
+        "wake request should include exec notification: {wake_context}"
     );
     assert!(
-        wake_notification.contains("Call write_stdin"),
-        "wake notification should instruct the model to poll: {wake_notification}"
+        wake_context.contains("<background_terminals>"),
+        "wake request should include background terminals: {wake_context}"
+    );
+    assert!(
+        wake_context.contains("session_id=\"1000\""),
+        "wake request should include the terminal session ID: {wake_context}"
+    );
+    assert!(
+        wake_context.contains("status=\"completed_waiting_to_be_reaped\""),
+        "wake request should show the completed terminal: {wake_context}"
+    );
+    assert!(
+        wake_context.contains("wake_on_exit=\"true\""),
+        "wake request should show wake-on-exit state: {wake_context}"
+    );
+    assert!(
+        wake_context.contains("Call write_stdin"),
+        "wake notification should instruct the model to poll: {wake_context}"
     );
     assert!(
         !wake_notification.contains("WAKE-ON-EXIT-FINAL-OUTPUT"),
