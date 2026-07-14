@@ -2,12 +2,23 @@
 
 set -euo pipefail
 
+if ! command -v flock >/dev/null 2>&1; then
+  echo "flock is required to prevent concurrent Docker builds" >&2
+  exit 1
+fi
+
+exec 9<"$0"
+if ! flock -n 9; then
+  echo "another build-codex-docker.sh invocation is already running" >&2
+  exit 1
+fi
+
 usage() {
   cat >&2 <<'EOF'
 Usage: scripts/build-codex-docker.sh [--debug] [--no-test] [--all-tests] [--platform linux/amd64|linux/arm64]
 
-Builds the codex binary in the repo's contributor Docker image, then runs
-focused regression tests by default.
+Builds the codex binary in the repo's contributor Docker image, runs focused
+regression tests by default, then installs it at ~/bin/codex.
 
 Options:
   --debug       Build the debug profile instead of the release profile.
@@ -179,4 +190,9 @@ else
   binary_path="codex-rs/${target_dir#/workspace/codex-rs/}/debug/codex"
 fi
 
+bin_path="${HOME}/bin/codex"
+rm -f "${bin_path}"
+cp "${repo_root}/${binary_path}" "${bin_path}"
+
 echo "Built ${binary_path}"
+echo "Installed ${bin_path}"
