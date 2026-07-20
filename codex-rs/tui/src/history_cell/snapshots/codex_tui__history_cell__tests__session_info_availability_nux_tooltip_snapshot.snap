@@ -4,7 +4,7 @@ assertion_line: 640
 expression: rendered
 ---
 ╭─────────────────────────────────────╮
-│ >_ OpenAI Codex (v0.144.4)          │
+│ >_ OpenAI Codex (v0.144.6)          │
 │                                     │
 │ model:     gpt-5   /model to change │
 │ directory: /tmp/project             │
