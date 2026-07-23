@@ -1,5 +1,6 @@
 ---
 source: tui/src/chatwidget/tests/guardian.rs
+assertion_line: 639
 expression: normalize_snapshot_paths(rendered)
 ---
 • Reviewing approval request (0s • esc to interrupt)
@@ -8,4 +9,4 @@ expression: normalize_snapshot_paths(rendered)
 
 › Ask Codex to do anything
 
-  gpt-5.6-sol default · /tmp/project
+  gpt-5.6-sol default · /tmp/project · Read Only

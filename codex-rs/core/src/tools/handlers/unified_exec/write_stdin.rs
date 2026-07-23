@@ -108,6 +108,7 @@ impl WriteStdinHandler {
                     process_id: Some(session_id),
                     exit_code: None,
                     original_token_count: None,
+                    output_omitted_bytes: None,
                     hook_command: None,
                 }));
             }
