@@ -3120,7 +3120,7 @@ async fn multi_agent_v2_wait_agent_accepts_explicit_timeout_at_configured_min() 
     assert_eq!(
         result,
         crate::tools::handlers::multi_agents_v2::wait::WaitAgentResult {
-            message: "Wait timed out.".to_string(),
+            message: "No other live agents can send a message.".to_string(),
             timed_out: true,
         }
     );
@@ -3129,7 +3129,7 @@ async fn multi_agent_v2_wait_agent_accepts_explicit_timeout_at_configured_min() 
 
 #[tokio::test]
 async fn multi_agent_v2_wait_agent_uses_configured_default_timeout() {
-    let (session, mut turn) = make_session_and_context().await;
+    let (mut session, mut turn) = make_session_and_context().await;
     let mut config = (*turn.config).clone();
     config
         .features
@@ -3139,8 +3139,28 @@ async fn multi_agent_v2_wait_agent_uses_configured_default_timeout() {
     config.multi_agent_v2.max_wait_timeout_ms = 1_000;
     config.multi_agent_v2.default_wait_timeout_ms = 50;
     set_turn_config(&mut turn, config);
+    let manager = thread_manager();
+    let root = manager
+        .start_thread((*turn.config).clone())
+        .await
+        .expect("root thread should start");
+    session.services.agent_control = manager.agent_control();
+    session.thread_id = root.thread_id;
     let session = Arc::new(session);
     let turn = Arc::new(turn);
+
+    SpawnAgentHandlerV2::default()
+        .handle(invocation(
+            session.clone(),
+            turn.clone(),
+            "spawn_agent",
+            function_payload(json!({
+                "message": "boot worker",
+                "task_name": "worker"
+            })),
+        ))
+        .await
+        .expect("spawn worker");
 
     let early = timeout(
         Duration::from_millis(/*millis*/ 20),
@@ -3183,6 +3203,51 @@ async fn multi_agent_v2_wait_agent_uses_configured_default_timeout() {
 }
 
 #[tokio::test]
+async fn multi_agent_v2_wait_agent_returns_immediately_without_other_live_agents() {
+    let (mut session, mut turn) = make_session_and_context().await;
+    let manager = thread_manager();
+    let root = manager
+        .start_thread((*turn.config).clone())
+        .await
+        .expect("root thread should start");
+    session.services.agent_control = manager.agent_control();
+    session.thread_id = root.thread_id;
+    let mut config = (*turn.config).clone();
+    config
+        .features
+        .enable(Feature::MultiAgentV2)
+        .expect("test config should allow feature update");
+    config.multi_agent_v2.min_wait_timeout_ms = 1;
+    config.multi_agent_v2.max_wait_timeout_ms = 10_000;
+    config.multi_agent_v2.default_wait_timeout_ms = 10_000;
+    set_turn_config(&mut turn, config);
+
+    let output = timeout(
+        Duration::from_millis(/*millis*/ 500),
+        WaitAgentHandlerV2::default().handle(invocation(
+            Arc::new(session),
+            Arc::new(turn),
+            "wait_agent",
+            function_payload(json!({})),
+        )),
+    )
+    .await
+    .expect("wait_agent should return without another live agent")
+    .expect("wait_agent should succeed");
+    let (content, success) = expect_text_output(output);
+    let result: crate::tools::handlers::multi_agents_v2::wait::WaitAgentResult =
+        serde_json::from_str(&content).expect("wait_agent result should be json");
+    assert_eq!(
+        result,
+        crate::tools::handlers::multi_agents_v2::wait::WaitAgentResult {
+            message: "No other live agents can send a message.".to_string(),
+            timed_out: true,
+        }
+    );
+    assert_eq!(success, None);
+}
+
+#[tokio::test]
 async fn multi_agent_v2_wait_agent_allows_zero_configured_timeout() {
     let (session, mut turn) = make_session_and_context().await;
     let mut config = (*turn.config).clone();
@@ -3215,7 +3280,7 @@ async fn multi_agent_v2_wait_agent_allows_zero_configured_timeout() {
     assert_eq!(
         result,
         crate::tools::handlers::multi_agents_v2::wait::WaitAgentResult {
-            message: "Wait timed out.".to_string(),
+            message: "No other live agents can send a message.".to_string(),
             timed_out: true,
         }
     );
@@ -3280,7 +3345,7 @@ async fn multi_agent_v2_wait_agent_accepts_explicit_timeout_at_configured_max() 
     assert_eq!(
         result,
         crate::tools::handlers::multi_agents_v2::wait::WaitAgentResult {
-            message: "Wait timed out.".to_string(),
+            message: "No other live agents can send a message.".to_string(),
             timed_out: true,
         }
     );
@@ -3364,6 +3429,45 @@ async fn wait_agent_times_out_when_status_is_not_final() {
         .submit(Op::Shutdown {})
         .await
         .expect("shutdown should submit");
+}
+
+#[tokio::test]
+async fn wait_agent_returns_immediately_when_only_waiting_for_self() {
+    let (mut session, turn) = make_session_and_context().await;
+    let manager = thread_manager();
+    let thread = manager
+        .start_thread((*turn.config).clone())
+        .await
+        .expect("start thread");
+    session.services.agent_control = manager.agent_control();
+    session.thread_id = thread.thread_id;
+
+    let output = timeout(
+        Duration::from_millis(/*millis*/ 500),
+        WaitAgentHandler::default().handle(invocation(
+            Arc::new(session),
+            Arc::new(turn),
+            "wait_agent",
+            function_payload(json!({
+                "targets": [thread.thread_id.to_string()],
+                "timeout_ms": 10_000,
+            })),
+        )),
+    )
+    .await
+    .expect("wait_agent should return without another agent")
+    .expect("wait_agent should succeed");
+    let (content, success) = expect_text_output(output);
+    let result: wait::WaitAgentResult =
+        serde_json::from_str(&content).expect("wait_agent result should be json");
+    assert_eq!(
+        result,
+        wait::WaitAgentResult {
+            status: HashMap::new(),
+            timed_out: true,
+        }
+    );
+    assert_eq!(success, None);
 }
 
 #[tokio::test]

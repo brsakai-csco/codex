@@ -71,6 +71,26 @@ impl Handler {
             .await;
 
         session
+            .services
+            .agent_control
+            .register_session_root(session.thread_id, turn.parent_thread_id);
+        let current_agent_path = turn
+            .session_source
+            .get_agent_path()
+            .unwrap_or_else(AgentPath::root);
+        let has_other_live_agents = session
+            .services
+            .agent_control
+            .list_agents(&turn.session_source, /*path_prefix*/ None)
+            .await
+            .map(|agents| {
+                agents
+                    .iter()
+                    .any(|agent| agent.agent_name != current_agent_path.as_str())
+            })
+            .unwrap_or(/*default*/ false);
+
+        session
             .emit_turn_item_started(
                 &turn,
                 &TurnItem::CollabAgentToolCall(CollabAgentToolCallItem {
@@ -88,8 +108,14 @@ impl Handler {
             )
             .await;
 
-        let deadline = Instant::now() + Duration::from_millis(timeout_ms as u64);
-        let outcome = wait_for_activity(&mut activity_rx, pending_activity, deadline).await;
+        let has_pending_activity = pending_activity.is_some()
+            || activity_rx.has_changed().unwrap_or(/*default*/ false);
+        let outcome = if !has_pending_activity && !has_other_live_agents {
+            WaitOutcome::NoOtherLiveAgents
+        } else {
+            let deadline = Instant::now() + Duration::from_millis(timeout_ms as u64);
+            wait_for_activity(&mut activity_rx, pending_activity, deadline).await
+        };
         let result = WaitAgentResult::from_outcome(outcome, requested_timeout_ms, timeout_ms);
 
         session
@@ -142,6 +168,7 @@ impl WaitAgentResult {
             WaitOutcome::MailboxActivity => "Wait completed.",
             WaitOutcome::Steered => "Wait interrupted by new input.",
             WaitOutcome::TimedOut => "Wait timed out.",
+            WaitOutcome::NoOtherLiveAgents => "No other live agents can send a message.",
         };
         let message = match requested_timeout_ms {
             Some(requested_timeout_ms) if requested_timeout_ms < timeout_ms => format!(
@@ -151,7 +178,7 @@ impl WaitAgentResult {
         };
         Self {
             message,
-            timed_out: outcome == WaitOutcome::TimedOut,
+            timed_out: matches!(outcome, WaitOutcome::TimedOut | WaitOutcome::NoOtherLiveAgents),
         }
     }
 }
@@ -179,6 +206,7 @@ enum WaitOutcome {
     MailboxActivity,
     Steered,
     TimedOut,
+    NoOtherLiveAgents,
 }
 
 async fn wait_for_activity(
@@ -200,3 +228,7 @@ async fn wait_for_activity(
         Ok(Err(_)) | Err(_) => WaitOutcome::TimedOut,
     }
 }
+
+#[cfg(test)]
+#[path = "wait_tests.rs"]
+mod tests;

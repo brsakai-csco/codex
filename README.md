@@ -92,6 +92,12 @@ It also adds a configurable `Shift+Tab` shortcut for switching between Ask for
 Approval and Read Only modes when named permission profiles are enabled. The
 footer shows the active mode.
 
+When multi-agent collaboration has no other live agent that can send a mailbox
+message, `wait_agent` returns immediately instead of waiting for its timeout.
+Already queued mailbox messages retain their existing behavior. Steered user
+input still interrupts an active wait; after the immediate no-agent result, it
+starts a new turn instead.
+
 ### TODO
 
 - Preserve the origin of rejected tool calls through unified exec. The current

@@ -493,7 +493,7 @@ async fn queue_only_agent_mail_wakes_sleeping_root_and_persists_message() {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn steer_interrupts_wait_agent_and_is_sent_in_follow_up_request() {
+async fn steer_after_fast_wait_agent_starts_a_new_turn() {
     const WAIT_CALL_ID: &str = "wait-call";
     const INITIAL_PROMPT: &str = "wait for an agent";
     const STEER_PROMPT: &str = "stop waiting and continue";
@@ -509,8 +509,12 @@ async fn steer_interrupts_wait_agent_and_is_sent_in_follow_up_request() {
         )),
         chunk(ev_completed("resp-1")),
     ];
-    let (server, _completions) =
-        start_streaming_sse_server(vec![first_chunks, response_completed_chunks("resp-2")]).await;
+    let (server, _completions) = start_streaming_sse_server(vec![
+        first_chunks,
+        response_completed_chunks("resp-2"),
+        response_completed_chunks("resp-3"),
+    ])
+    .await;
     let codex = test_codex()
         .with_model("gpt-5.4")
         .with_config(|config| {
@@ -530,27 +534,36 @@ async fn steer_interrupts_wait_agent_and_is_sent_in_follow_up_request() {
     })
     .await;
 
-    steer_user_input(&codex, STEER_PROMPT).await;
     wait_for_turn_complete(&codex).await;
 
+    submit_user_input(&codex, STEER_PROMPT).await;
+    wait_for_turn_complete(&codex).await;
+
+    server.wait_for_request_count(/*count*/ 3).await;
     let requests = server.requests().await;
-    assert_eq!(requests.len(), 2);
+    assert_eq!(requests.len(), 3);
     let second: Value = from_slice(&requests[1]).expect("parse second request");
-    let relevant_user_input = message_input_texts(&second, "user")
+    let third: Value = from_slice(&requests[2]).expect("parse third request");
+    let second_user_input = message_input_texts(&second, "user")
+        .into_iter()
+        .filter(|text| text == INITIAL_PROMPT || text == STEER_PROMPT)
+        .collect::<Vec<_>>();
+    assert_eq!(second_user_input, vec![INITIAL_PROMPT.to_string()]);
+    let wait_output = function_call_output_text(&second, WAIT_CALL_ID).expect("wait_agent output");
+    assert_eq!(
+        serde_json::from_str::<Value>(wait_output).expect("parse wait_agent output"),
+        json!({
+            "message": "No other live agents can send a message.",
+            "timed_out": true,
+        })
+    );
+    let relevant_user_input = message_input_texts(&third, "user")
         .into_iter()
         .filter(|text| text == INITIAL_PROMPT || text == STEER_PROMPT)
         .collect::<Vec<_>>();
     assert_eq!(
         relevant_user_input,
         vec![INITIAL_PROMPT.to_string(), STEER_PROMPT.to_string()]
-    );
-    let wait_output = function_call_output_text(&second, WAIT_CALL_ID).expect("wait_agent output");
-    assert_eq!(
-        serde_json::from_str::<Value>(wait_output).expect("parse wait_agent output"),
-        json!({
-            "message": "Wait interrupted by new input.",
-            "timed_out": false,
-        })
     );
 
     server.shutdown().await;

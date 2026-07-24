@@ -63,6 +63,9 @@ impl Handler {
         let arguments = function_arguments(payload)?;
         let args: WaitArgs = parse_arguments(&arguments)?;
         let receiver_thread_ids = parse_agent_id_targets(args.targets)?;
+        let waiting_only_for_self = receiver_thread_ids
+            .iter()
+            .all(|receiver_thread_id| *receiver_thread_id == session.thread_id);
         let mut receiver_agents = Vec::with_capacity(receiver_thread_ids.len());
         let mut target_by_thread_id = HashMap::with_capacity(receiver_thread_ids.len());
         for receiver_thread_id in &receiver_thread_ids {
@@ -155,6 +158,8 @@ impl Handler {
 
         let statuses = if !initial_final_statuses.is_empty() {
             initial_final_statuses
+        } else if waiting_only_for_self {
+            Vec::new()
         } else {
             let mut futures = FuturesUnordered::new();
             for (id, rx) in status_rxs.into_iter() {
