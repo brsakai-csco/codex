@@ -239,6 +239,7 @@ async fn exit_watcher_waits_for_late_network_denial_before_classifying_end() -> 
         Instant::now(),
         Some(network_denial_monitor),
         /*plugin_metrics_sidecar*/ None,
+        /*wake_on_exit*/ false,
     );
 
     let exited_at = Instant::now();

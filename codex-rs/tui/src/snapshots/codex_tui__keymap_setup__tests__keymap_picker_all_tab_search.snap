@@ -1,5 +1,6 @@
 ---
 source: tui/src/keymap_setup.rs
+assertion_line: 1199
 expression: snapshot
 ---
 Open Agents | alt-a | Global open_agents Open Agents Open the shared agent-session overview. alt-a Default

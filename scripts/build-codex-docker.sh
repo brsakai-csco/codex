@@ -154,6 +154,7 @@ case "${test_mode}" in
     codex_core_filter+=' & not test(suite::network_approval::allowing_network_policy_amendment_persists_context_and_bypasses_prompt)'
     codex_core_filter+=' & not test(suite::network_approval::user_network_approval_once_session_and_denial_semantics)'
     codex_core_filter+=' & not test(suite::network_approval::guardian_network_approval_preserves_action_and_outcome_routing)'
+    codex_core_filter+=' & not test(suite::network_approval::cancelled_guardian_network_review_fails_closed_without_rewriting_turn_state)'
     codex_core_filter+=' & not test(suite::network_approval::timed_out_guardian_network_review_uses_timeout_outcome_without_user_fallback)'
     codex_core_filter+=' & not test(suite::network_approval::ambiguous_unattributed_network_request_is_not_assigned_to_active_calls)'
     codex_core_filter+=' & not test(suite::extension_sandbox::)'

@@ -3141,7 +3141,7 @@ async fn multi_agent_v2_wait_agent_uses_configured_default_timeout() {
     set_turn_config(&mut turn, config);
     let manager = thread_manager();
     let root = manager
-        .start_thread((*turn.config).clone())
+        .start_thread(StartThreadOptions::new((*turn.config).clone()))
         .await
         .expect("root thread should start");
     session.services.agent_control = manager.agent_control();
@@ -3207,7 +3207,7 @@ async fn multi_agent_v2_wait_agent_returns_immediately_without_other_live_agents
     let (mut session, mut turn) = make_session_and_context().await;
     let manager = thread_manager();
     let root = manager
-        .start_thread((*turn.config).clone())
+        .start_thread(StartThreadOptions::new((*turn.config).clone()))
         .await
         .expect("root thread should start");
     session.services.agent_control = manager.agent_control();
@@ -3436,7 +3436,7 @@ async fn wait_agent_returns_immediately_when_only_waiting_for_self() {
     let (mut session, turn) = make_session_and_context().await;
     let manager = thread_manager();
     let thread = manager
-        .start_thread((*turn.config).clone())
+        .start_thread(StartThreadOptions::new((*turn.config).clone()))
         .await
         .expect("start thread");
     session.services.agent_control = manager.agent_control();
