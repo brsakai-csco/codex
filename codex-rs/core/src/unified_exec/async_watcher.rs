@@ -250,11 +250,14 @@ async fn wake_for_process_exit(session_ref: Arc<Session>, process_id: i32) {
     let Err(items) = session_ref.inject_if_running(items).await else {
         return;
     };
-    if let Err(err) = session_ref.try_start_turn_if_idle(items).await {
-        session_ref
-            .inject_no_new_turn(err.into_input(), /*current_turn_context*/ None)
-            .await;
-    }
+    session_ref
+        .inject_no_new_turn(items, /*current_turn_context*/ None)
+        .await;
+    let _ = session_ref
+        .services
+        .agent_control
+        .send_input(session_ref.thread_id, Vec::new(), None, None)
+        .await;
 }
 
 impl<const MAX_BYTES: usize> Buffer<MAX_BYTES> {

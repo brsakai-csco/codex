@@ -253,7 +253,7 @@ impl ExecCommandHandler {
             yield_time_ms,
             max_output_tokens,
             wake_on_exit,
-            sandbox_permissions,
+            sandbox_permissions: _,
             additional_permissions,
             justification,
             prefix_rule,
