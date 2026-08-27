@@ -1,6 +1,6 @@
 ---
 source: tui/src/keymap_setup.rs
-assertion_line: 1207
+assertion_line: 1140
 expression: "render_picker(params, 120)"
 ---
 
@@ -19,6 +19,5 @@ expression: "render_picker(params, 120)"
   Global       - Toggle Vim Mode            unbound
   Global         Toggle Permission Mode     shift-tab
   Global         Toggle Raw Output          alt-r
-  Global         Toggle Side Conversation   ctrl-/
 
   left/right group · enter edit shortcut · * custom · - unbound · esc close

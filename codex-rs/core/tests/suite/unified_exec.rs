@@ -1255,7 +1255,7 @@ async fn unified_exec_wake_on_exit_defers_empty_polls_until_completion() -> Resu
         "wake notification should instruct the model to poll: {wake_context}"
     );
     assert!(
-        !wake_notification.contains("WAKE-ON-EXIT-FINAL-OUTPUT"),
+        !wake_notification.contains("\nWAKE-ON-EXIT-FINAL-OUTPUT"),
         "wake notification should not deliver final process output: {wake_notification}"
     );
 

@@ -231,12 +231,9 @@ When UI or text output changes intentionally, update the snapshots as follows:
   - `cargo insta pending-snapshots -p codex-tui`
 - Review changes by reading the generated `*.snap.new` files directly in the repo, or preview a specific file:
   - `cargo insta show -p codex-tui path/to/file.snap.new`
-- Only if you intend to accept all new snapshots in this crate, run:
-  - `cargo insta accept -p codex-tui`
-
-If you don’t have the tool:
-
-- `cargo install --locked cargo-insta`
+- To accept reviewed updates, copy each `*.snap.new` file over the matching
+  `.snap` file, then remove the `.snap.new` file. Do this directly; do not
+  install `cargo-insta` merely to accept snapshots.
 
 ### Benchmarks
 

@@ -1,6 +1,7 @@
 ---
 source: tui/src/chatwidget/tests/composer_submission.rs
-expression: normalize_snapshot_paths(render_bottom_popup(&chat, 80))
+assertion_line: 72
+expression: "normalize_snapshot_paths(render_bottom_popup(&chat, 80))"
 ---
 • Working (0s • esc to interrupt)
 
@@ -10,4 +11,4 @@ expression: normalize_snapshot_paths(render_bottom_popup(&chat, 80))
 
 › Ask Codex to do anything
 
-  gpt-5.6-sol default · /tmp/project
+  gpt-5.6-sol default · /tmp/project · Read Only

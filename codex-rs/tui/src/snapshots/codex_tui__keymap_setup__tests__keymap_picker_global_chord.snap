@@ -1,5 +1,6 @@
 ---
 source: tui/src/keymap_setup.rs
+assertion_line: 1174
 expression: "render_picker(params, 120)"
 ---
 
@@ -16,7 +17,7 @@ expression: "render_picker(params, 120)"
   Global         Copy                       ctrl-o
   Global         Clear Terminal             ctrl-l
   Global       - Toggle Vim Mode            unbound
+  Global         Toggle Permission Mode     shift-tab
   Global         Toggle Raw Output          alt-r
-  Global         Toggle Side Conversation   ctrl-/
 
   left/right group · enter edit shortcut · * custom · - unbound · esc close
