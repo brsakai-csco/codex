@@ -224,7 +224,7 @@ pub(crate) async fn run_turn(
         Err(err) => return Err(err),
     };
     // Keep the exact model-visible state used by this turn and its inline compactions.
-    let (mut world_state, display_roots, background_terminals) = tokio::join!(
+    let (world_state, display_roots, background_terminals) = tokio::join!(
         sess.record_context_updates_and_set_reference_context_item(first_step_context.as_ref()),
         async {
             if first_step_context

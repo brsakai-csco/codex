@@ -1,12 +1,12 @@
 ---
 source: tui/src/keymap_setup.rs
-assertion_line: 1174
+assertion_line: 1183
 expression: "render_picker(params, 120)"
 ---
 
   Keymap
   All configurable shortcuts.
-  119 actions, 1 customized, 4 unbound.
+  120 actions, 1 customized, 4 unbound.
 
   [All]  Common  Customized (1)  Unbound (4)  App  Composer  Editor  Vim  Navigation  Agents  Approval  Debug
 

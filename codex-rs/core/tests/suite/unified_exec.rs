@@ -10,6 +10,7 @@ use std::sync::OnceLock;
 use anyhow::Context;
 use anyhow::Result;
 use codex_exec_server::CreateDirectoryOptions;
+use codex_features::Feature;
 use codex_protocol::config_types::CollaborationMode;
 use codex_protocol::config_types::EnvironmentVariablePattern;
 use codex_protocol::config_types::ModeKind;
@@ -1124,7 +1125,6 @@ async fn unified_exec_wake_on_exit_defers_empty_polls_until_completion() -> Resu
     let server = start_mock_server().await;
 
     let mut builder = test_codex().with_config(|config| {
-        config.use_experimental_unified_exec_tool = true;
         config
             .features
             .enable(Feature::UnifiedExec)

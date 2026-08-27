@@ -1,4 +1,5 @@
 use super::ContextualUserFragment;
+use codex_protocol::models::ContentItemKind;
 
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct ExecNotification {
@@ -12,6 +13,10 @@ impl ExecNotification {
 }
 
 impl ContextualUserFragment for ExecNotification {
+    fn content_kind(&self) -> ContentItemKind {
+        ContentItemKind("unified_exec.exec_notification".to_string())
+    }
+
     fn role(&self) -> &'static str {
         "user"
     }

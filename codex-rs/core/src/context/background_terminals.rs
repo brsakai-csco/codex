@@ -2,6 +2,7 @@ use super::ContextualUserFragment;
 use crate::context::environment_context::push_xml_escaped_text;
 use crate::unified_exec::BackgroundTerminalContext;
 use crate::unified_exec::BackgroundTerminalStatus;
+use codex_protocol::models::ContentItemKind;
 
 const MAX_BACKGROUND_TERMINALS: usize = 5;
 const MAX_COMMAND_CHARS: usize = 50;
@@ -29,6 +30,10 @@ impl BackgroundTerminals {
 }
 
 impl ContextualUserFragment for BackgroundTerminals {
+    fn content_kind(&self) -> ContentItemKind {
+        ContentItemKind("unified_exec.background_terminals".to_string())
+    }
+
     fn role(&self) -> &'static str {
         "user"
     }
